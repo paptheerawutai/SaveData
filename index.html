@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#16110d" />
+<title>แมวน้อย • Live</title>
+<style>
+  :root{
+    --bg:#16110d;          /* น้ำตาลเข้มเกือบดำ ดูกลางคืนสบายตา */
+    --panel:#211a14;
+    --ink:#f3e7d8;         /* ครีมอุ่น */
+    --muted:#9a8a78;
+    --amber:#ffb347;       /* ส้มอำพัน = สีหลัก */
+    --amber-deep:#e0892b;
+    --live:#7ee081;        /* เขียวสด = ออนไลน์ */
+    --talk:#ff7a59;        /* ส้มแดง = กำลังพูด */
+    --line:#3a2f25;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    display:flex;flex-direction:column;
+    min-height:100dvh;overflow:hidden;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  header{
+    display:flex;align-items:center;gap:.6rem;
+    padding:.85rem 1.1rem;
+  }
+  .paw{font-size:1.35rem;filter:saturate(1.2)}
+  .title{font-weight:700;letter-spacing:.2px}
+  .title small{display:block;font-weight:400;font-size:.72rem;color:var(--muted);letter-spacing:.4px}
+  .status{
+    margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;
+    font-size:.78rem;font-weight:600;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);
+    padding:.38rem .7rem;border-radius:999px;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .status.live{color:var(--live)}
+  .status.live .dot{background:var(--live);box-shadow:0 0 0 0 rgba(126,224,129,.6);animation:pulse 1.8s infinite}
+  .status.connecting .dot{background:var(--amber);animation:pulse 1s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(126,224,129,.55)}70%{box-shadow:0 0 0 9px rgba(126,224,129,0)}100%{box-shadow:0 0 0 0 rgba(126,224,129,0)}}
+
+  .stage{
+    position:relative;flex:1;margin:0 .8rem;
+    border-radius:20px;overflow:hidden;background:#000;
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+  }
+  video{width:100%;height:100%;object-fit:contain;background:#000}
+  .placeholder{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:.6rem;color:var(--muted);
+    text-align:center;padding:2rem;
+  }
+  .placeholder .big{font-size:3rem}
+  .talk-flag{
+    position:absolute;top:.7rem;left:.7rem;
+    display:none;align-items:center;gap:.4rem;
+    background:rgba(255,122,89,.18);border:1px solid var(--talk);
+    color:var(--talk);font-weight:700;font-size:.78rem;
+    padding:.32rem .65rem;border-radius:999px;backdrop-filter:blur(6px);
+  }
+  body.talking .talk-flag{display:inline-flex}
+
+  .controls{
+    display:flex;align-items:center;justify-content:center;gap:1.1rem;
+    padding:1.1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  }
+  .icon-btn{
+    width:58px;height:58px;border-radius:18px;
+    background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);font-size:1.4rem;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:transform .08s,background .15s,color .15s;
+  }
+  .icon-btn:active{transform:scale(.93)}
+  .icon-btn.off{color:var(--muted)}
+  .icon-btn.on{color:var(--amber);border-color:var(--amber-deep)}
+
+  /* ปุ่มพูด = ตัวเอกของหน้า */
+  .talk-btn{
+    position:relative;width:104px;height:104px;border-radius:50%;
+    border:none;cursor:pointer;color:#1a120a;font-weight:800;
+    font-size:.95rem;letter-spacing:.3px;
+    background:radial-gradient(circle at 35% 30%,#ffd089,var(--amber) 55%,var(--amber-deep));
+    box-shadow:0 10px 30px rgba(255,150,40,.35),inset 0 -4px 12px rgba(150,80,0,.35);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;
+    transition:transform .1s ease;
+    touch-action:none;user-select:none;
+  }
+  .talk-btn .ico{font-size:1.7rem;line-height:1}
+  .talk-btn:active,.talk-btn.holding{transform:scale(.92)}
+  .talk-btn.holding{
+    background:radial-gradient(circle at 35% 30%,#ffb199,var(--talk) 55%,#e85a3c);
+    box-shadow:0 0 0 8px rgba(255,122,89,.25),0 10px 30px rgba(255,90,60,.4);
+  }
+  .talk-btn:disabled{filter:grayscale(.7) brightness(.7);cursor:not-allowed;box-shadow:none}
+
+  .start-overlay{
+    position:absolute;inset:0;z-index:5;
+    background:rgba(10,7,4,.82);backdrop-filter:blur(3px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;
+    text-align:center;padding:2rem;
+  }
+  .start-overlay .big{font-size:3.4rem}
+  .start-overlay p{margin:0;color:var(--muted);max-width:18rem;line-height:1.5}
+  .start-btn{
+    margin-top:.4rem;border:none;cursor:pointer;
+    background:var(--amber);color:#1a120a;font-weight:800;font-size:1.05rem;
+    padding:.85rem 2.2rem;border-radius:14px;
+    box-shadow:0 8px 24px rgba(255,150,40,.35);
+  }
+  .hint{font-size:.72rem;color:var(--muted);text-align:center;padding:0 1.5rem .4rem}
+</style>
+</head>
+<body>
+  <header>
+    <span class="paw">🐾</span>
+    <div class="title">แมวน้อย<small>กล้องส่วนตัว • คุยได้</small></div>
+    <span class="status" id="status"><span class="dot"></span><span id="statusText">ออฟไลน์</span></span>
+  </header>
+
+  <div class="stage" id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="talk-flag">🎙️ กำลังพูด…</div>
+    <div class="placeholder" id="placeholder">
+      <div class="big">🐱</div>
+      <div>ยังไม่ได้เชื่อมต่อ</div>
+    </div>
+
+    <div class="start-overlay" id="startOverlay">
+      <div class="big">🐈‍⬛</div>
+      <p>แตะเพื่อดูแมวน้อยแบบสด ๆ และเปิดไมค์ไว้คุยกับมัน</p>
+      <button class="start-btn" id="startBtn">เริ่มดูแมว</button>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">กดปุ่มกลางค้างไว้เพื่อพูด • ปล่อยเพื่อหยุด</div>
+
+  <div class="controls">
+    <button class="icon-btn off" id="listenBtn" title="ฟังเสียงแมว">🔇</button>
+    <button class="talk-btn" id="talkBtn" disabled>
+      <span class="ico">🎙️</span><span>กดพูด</span>
+    </button>
+    <button class="icon-btn" id="snapBtn" title="ถ่ายภาพ">📸</button>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const video = $("video");
+const statusEl = $("status"), statusText = $("statusText");
+const talkBtn = $("talkBtn"), listenBtn = $("listenBtn"), snapBtn = $("snapBtn");
+const startOverlay = $("startOverlay"), startBtn = $("startBtn");
+const placeholder = $("placeholder");
+
+let pc = null;
+let micTrack = null;
+let listening = false;
+
+function setStatus(state, text){
+  statusEl.className = "status " + state;
+  statusText.textContent = text;
+}
+
+async function connect(){
+  setStatus("connecting", "กำลังเชื่อมต่อ…");
+  startOverlay.style.display = "none";
+
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  // รวมวิดีโอ+เสียงที่รับมาจากกล้องลงใน <video> ตัวเดียว
+  const remote = new MediaStream();
+  pc.ontrack = (e) => {
+    remote.addTrack(e.track);
+    video.srcObject = remote;
+    placeholder.style.display = "none";
+  };
+
+  pc.onconnectionstatechange = () => {
+    const s = pc.connectionState;
+    if (s === "connected") setStatus("live", "ออนไลน์");
+    else if (s === "connecting") setStatus("connecting", "กำลังเชื่อมต่อ…");
+    else if (["failed","disconnected","closed"].includes(s)){
+      setStatus("", "หลุดการเชื่อมต่อ");
+      talkBtn.disabled = true;
+    }
+  };
+
+  // ขอไมค์มือถือไว้คุยกับแมว (เริ่มแบบปิดเสียงไว้ก่อน = push-to-talk)
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+      video: false
+    });
+    micTrack = stream.getAudioTracks()[0];
+    micTrack.enabled = false;            // เงียบไว้จนกว่าจะกดพูด
+    pc.addTrack(micTrack, stream);       // ส่งเสียงเราไปฝั่งกล้อง
+    talkBtn.disabled = false;
+  } catch(err){
+    // ไม่มีไมค์/ไม่อนุญาต — ยังดูแมวได้ แต่พูดไม่ได้
+    $("hint").textContent = "ดูได้อย่างเดียว (ไม่ได้เปิดสิทธิ์ไมค์)";
+    talkBtn.disabled = true;
+  }
+
+  // ขอรับวิดีโอจากกล้อง
+  pc.addTransceiver("video", { direction: "recvonly" });
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  const resp = await fetch("/offer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type })
+  });
+  const answer = await resp.json();
+  await pc.setRemoteDescription(answer);
+}
+
+// ---- Push-to-talk ----
+function startTalk(e){
+  if (!micTrack || talkBtn.disabled) return;
+  e.preventDefault();
+  micTrack.enabled = true;
+  talkBtn.classList.add("holding");
+  document.body.classList.add("talking");
+}
+function stopTalk(){
+  if (!micTrack) return;
+  micTrack.enabled = false;
+  talkBtn.classList.remove("holding");
+  document.body.classList.remove("talking");
+}
+talkBtn.addEventListener("pointerdown", startTalk);
+talkBtn.addEventListener("pointerup", stopTalk);
+talkBtn.addEventListener("pointercancel", stopTalk);
+talkBtn.addEventListener("pointerleave", stopTalk);
+
+// ---- ฟังเสียงแมว (เปิด/ปิดเสียงขาเข้า) ----
+listenBtn.addEventListener("click", () => {
+  listening = !listening;
+  video.muted = !listening;
+  listenBtn.textContent = listening ? "🔊" : "🔇";
+  listenBtn.classList.toggle("on", listening);
+  listenBtn.classList.toggle("off", !listening);
+  if (listening) video.play().catch(()=>{});
+});
+
+// ---- ถ่ายภาพหน้าจอแมว ----
+snapBtn.addEventListener("click", () => {
+  if (!video.videoWidth) return;
+  const c = document.createElement("canvas");
+  c.width = video.videoWidth; c.height = video.videoHeight;
+  c.getContext("2d").drawImage(video, 0, 0);
+  const a = document.createElement("a");
+  a.href = c.toDataURL("image/png");
+  a.download = "cat-" + Date.now() + ".png";
+  a.click();
+});
+
+startBtn.addEventListener("click", connect);
+</script>
+</body>
+</html>
