@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plastic Production Command Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg: #f4fbff;
+            --bg-accent: #dbf4ff;
+            --panel: #ffffff;
+            --line: #c9e8f4;
+            --ink: #0f2f43;
+            --sub-ink: #3d6478;
+            --cyan: #0ea5c9;
+            --green: #10b981;
+            --amber: #f59e0b;
+            --rose: #ef4444;
+        }
+
+        body {
+            font-family: "Prompt", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 10% 10%, rgba(14, 165, 201, 0.18), transparent 38%),
+                radial-gradient(circle at 90% 20%, rgba(245, 158, 11, 0.2), transparent 30%),
+                linear-gradient(160deg, var(--bg), var(--bg-accent));
+        }
+
+        .mono {
+            font-family: "Chakra Petch", monospace;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--line);
+            box-shadow: 0 8px 30px rgba(16, 92, 126, 0.08);
+            backdrop-filter: blur(6px);
+        }
+
+        .chip {
+            border: 1px solid #b6deeb;
+            background: #eef9ff;
+            color: var(--sub-ink);
+        }
+
+        .grid-surface {
+            position: relative;
+            isolation: isolate;
+        }
+
+        .grid-surface::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.42;
+            background-image:
+                linear-gradient(to right, rgba(61, 100, 120, 0.14) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(61, 100, 120, 0.14) 1px, transparent 1px);
+            background-size: 26px 26px;
+            mask-image: radial-gradient(circle at center, black 42%, transparent 95%);
+        }
+
+        .focus-ring {
+            animation: pulse-ring 1.6s infinite ease-in-out;
+        }
+
+        @keyframes pulse-ring {
+            0%, 100% {
+                border-color: rgba(245, 158, 11, 0.95);
+                box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.28), 0 0 24px rgba(245, 158, 11, 0.25);
+            }
+            50% {
+                border-color: rgba(245, 158, 11, 0.45);
+                box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1), 0 0 10px rgba(245, 158, 11, 0.12);
+            }
+        }
+
+        .metric-title {
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--sub-ink);
+            font-weight: 700;
+        }
+
+        .ad-ribbon {
+            background: linear-gradient(110deg, #fff7ed 0%, #ffffff 42%, #e0f7ff 100%);
+            border-bottom: 1px solid #f1dcc2;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ad-ribbon-bottom {
+            border-bottom: 0;
+            border-top: 1px solid #f1dcc2;
+        }
+
+        .ad-ribbon::after {
+            content: "";
+            position: absolute;
+            inset: -180% auto -180% -25%;
+            width: 20%;
+            transform: rotate(22deg);
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.92), transparent);
+            animation: sweep 4.8s linear infinite;
+        }
+
+        .ad-title {
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: linear-gradient(90deg, #a74800, #ce6e00 50%, #0b7290 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+        }
+
+        .ad-subtitle {
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #7c5a2a;
+            font-weight: 700;
+        }
+
+        .step-image-wrap {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 0.5rem;
+        }
+
+        .step-image-frame {
+            width: 100%;
+            height: 58px;
+            border-radius: 10px;
+            border: 1px dashed #7dd3fc;
+            background: linear-gradient(180deg, #f8fdff, #edf8ff);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .step-image-tile {
+            position: absolute;
+            inset: 0;
+            background-repeat: repeat-x;
+            background-size: auto 100%;
+            background-position: center bottom;
+        }
+
+        .step-image-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 47, 73, 0.2);
+            color: #ffffff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .step-image-frame:hover .step-image-overlay {
+            opacity: 1;
+        }
+
+        .ad-marquee-track {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            min-height: 34px;
+        }
+
+        .ad-marquee-stream {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            width: max-content;
+            animation: marquee-left-loop 12s linear infinite;
+            will-change: transform;
+        }
+
+        .ad-marquee-text {
+            white-space: nowrap;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #dc2626;
+            text-shadow: 0 2px 8px rgba(220, 38, 38, 0.28);
+            font-size: clamp(1.1rem, 2.8vw, 2rem);
+            padding-right: 2rem;
+        }
+
+        .cinematic-frame::before,
+        .cinematic-frame::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .cinematic-frame::before {
+            top: 0;
+            height: 25%;
+            background: linear-gradient(to bottom, rgba(5, 17, 25, 0.48), transparent);
+        }
+
+        .cinematic-frame::after {
+            bottom: 0;
+            height: 34%;
+            background: linear-gradient(to top, rgba(3, 12, 18, 0.62), transparent);
+        }
+
+        @keyframes sweep {
+            from { left: -35%; }
+            to { left: 130%; }
+        }
+
+        @keyframes marquee-left-loop {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #9bc9db;
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-hidden select-none">
+
+    <header class="glass-card border-x-0 border-t-0 rounded-none px-4 lg:px-6 py-3">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-start gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-cyan-700">
+                    <i class="ph-bold ph-factory text-2xl"></i>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-lg lg:text-xl font-extrabold tracking-wide text-slate-800">PLASTIC INJECTION COMMAND BOARD</h1>
+                        <span class="chip text-[11px] mono px-2 py-0.5 rounded-full">LINE 02</span>
+                        <span class="chip text-[11px] mono px-2 py-0.5 rounded-full">IMM-180T</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mt-0.5">Mold: TRAY-B-4CAV | Material: ABS + MB Orange 2% | Shift A (08:00 - 20:00)</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 lg:gap-3">
+                <input id="data-upload-input" type="file" accept=".csv,.xlsx,.xls,.json,.txt" class="hidden">
+                <button onclick="triggerDataUpload()" class="px-3 py-1 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs font-bold hover:bg-cyan-100 transition">อัปโหลดข้อมูล</button>
+                <div class="px-3 py-1 rounded-xl bg-white border border-slate-200 text-right min-w-[120px]">
+                    <div id="digital-clock" class="mono text-base font-bold text-slate-700">00:00:00</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="grid-surface flex-1 overflow-auto p-4 lg:p-5 space-y-4">
+
+        <section class="glass-card rounded-3xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-white/80">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+                    <h3 class="text-xl lg:text-3xl font-extrabold uppercase tracking-wide text-amber-700 leading-tight">HAIRPING HORDER 422</h3>
+                </div>
+                <button onclick="toggleVideoMute()" class="text-slate-500 hover:text-slate-700 text-sm">
+                    <i id="mute-icon" class="ph-bold ph-speaker-slash text-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col lg:flex-row">
+                <div class="cinematic-frame relative bg-slate-900 min-h-[48vh] lg:min-h-[62vh] flex items-center justify-center overflow-hidden lg:w-4/5">
+                    <video id="focus-video" class="w-full h-full object-cover" autoplay loop muted playsinline>
+                        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4">
+                        Browser does not support video.
+                    </video>
+
+                    <div class="focus-ring absolute w-44 h-32 border-[3px] rounded-xl top-[28%] right-[20%] pointer-events-none p-1.5 flex flex-col justify-between">
+                        <span class="text-[10px] font-black bg-amber-400 text-slate-900 px-1.5 py-0.5 rounded self-start uppercase">จุดตัด Gate</span>
+                        <span class="text-[9px] text-amber-100 bg-slate-900/80 px-1 py-0.5 rounded self-end">ห้ามลึกเกิน 0.2mm</span>
+                    </div>
+
+                    <div class="absolute bottom-3 left-3 right-3 p-3 rounded-xl bg-white/90 border border-amber-200 shadow-lg flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-bold text-amber-700">ขั้นตอนหลัก: ใช้คีมปากเฉียงตัดติ่ง Gate ให้เรียบเสมอผิวงาน</p>
+                            <p class="text-xs text-slate-600">ข้อควรระวัง: ห้ามบิดชิ้นงาน เพื่อลดรอยร้าวขาว (Stress Mark)</p>
+                        </div>
+                        <button onclick="openModal('wi-modal')" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-extrabold shrink-0">ดู WI ฉบับเต็ม</button>
+                    </div>
+                </div>
+
+                <aside class="glass-card border-0 border-l border-slate-200 rounded-none lg:w-1/5 p-3 lg:p-4 flex">
+                    <div class="w-full rounded-2xl border border-cyan-200 bg-white p-3 flex flex-col gap-3 min-h-[62vh]">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-extrabold text-slate-700 uppercase tracking-wide">เมนูหลัก</h4>
+                            <span id="menu-total-ng" class="mono text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-600 border border-rose-200">NG 8</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="openModal('ng-modal')" class="rounded-xl border border-rose-300 bg-gradient-to-b from-rose-500 to-orange-400 text-white px-2 py-2 shadow-md hover:-translate-y-0.5 transition">
+                                <div class="flex flex-col items-center justify-center gap-1">
+                                    <i class="ph-bold ph-warning-circle text-base"></i>
+                                    <span class="text-[10px] font-black leading-tight text-center">1. ลงงานเสีย</span>
+                                </div>
+                            </button>
+
+                            <button onclick="openModal('history-modal')" class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-2 py-2 hover:-translate-y-0.5 transition">
+                                <div class="flex flex-col items-center justify-center gap-1">
+                                    <i class="ph-bold ph-clock-counter-clockwise text-base"></i>
+                                    <span class="text-[10px] font-bold leading-tight text-center">2. ประวัติ</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h5 class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wide">รายการหน้าจอหลัก</h5>
+                                <span class="text-[10px] text-emerald-700 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5">Live</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="text-slate-600">สถานะเครื่อง</span>
+                                    <span class="font-bold text-emerald-700">RUNNING</span>
+                                </div>
+                                <div class="rounded-lg px-2 py-2 text-center">
+                                    <div class="text-[10px] font-bold uppercase tracking-wide text-rose-500">NG</div>
+                                    <div id="main-ng-display" class="mono text-4xl leading-none font-black text-rose-600">8</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-white p-2.5 flex-1">
+                            <div class="mb-2">
+                                <h5 class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wide">สถานะรายการคลิป</h5>
+                            </div>
+                            <div class="space-y-2 text-[11px]">
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-slate-700 font-bold">ก่อนหน้า</span>
+                                        <span class="mono text-[10px] text-slate-600">00:35</span>
+                                    </div>
+                                    <p class="text-slate-700/90 mt-0.5">หยิบงานจาก Robot</p>
+                                </div>
+                                <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1.5 animate-pulse">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-emerald-700 font-bold">ปัจจุบัน</span>
+                                        <span class="mono text-[10px] text-emerald-700">01:15</span>
+                                    </div>
+                                    <p class="text-emerald-800 mt-0.5">ตัด Gate + ตรวจ Sink</p>
+                                </div>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-slate-700 font-bold">ถัดไป</span>
+                                        <span class="mono text-[10px] text-slate-600">00:42</span>
+                                    </div>
+                                    <p class="text-slate-700/90 mt-0.5">แพ็กลงกล่อง 50 pcs/ctn</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="ad-ribbon ad-ribbon-bottom px-0 py-2.5">
+                <div class="ad-marquee-track w-full">
+                    <div class="ad-marquee-stream" role="presentation">
+                        <h3 class="ad-marquee-text">HAIRPING HORDER 422</h3>
+                        <h3 class="ad-marquee-text" aria-hidden="true">HAIRPING HORDER 422</h3>
+                        <h3 class="ad-marquee-text" aria-hidden="true">HAIRPING HORDER 422</h3>
+                        <h3 class="ad-marquee-text" aria-hidden="true">HAIRPING HORDER 422</h3>
+                        <h3 class="ad-marquee-text" aria-hidden="true">HAIRPING HORDER 422</h3>
+                        <h3 class="ad-marquee-text" aria-hidden="true">HAIRPING HORDER 422</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-image-wrap">
+                <input id="step-image-input" type="file" accept="image/*" class="hidden">
+                <div class="step-image-frame">
+                    <div id="step-image-preview" class="step-image-tile" style="background-image: url('image-Photoroom.png');" role="img" aria-label="Step reference image"></div>
+                    <div class="step-image-overlay">ภาพประกอบกิจกรรมไทย</div>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <footer class="glass-card border-x-0 border-b-0 rounded-none px-4 lg:px-6 py-2.5 text-xs text-slate-600">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-wrap items-center gap-3 lg:gap-5">
+                <span class="flex items-center gap-1.5"><i class="ph-bold ph-check-circle text-emerald-600"></i> Dryer 85C</span>
+                <span class="flex items-center gap-1.5"><i class="ph-bold ph-check-circle text-emerald-600"></i> Chiller 15C</span>
+                <span class="flex items-center gap-1.5"><i class="ph-bold ph-check-circle text-emerald-600"></i> Robot Synced</span>
+                <span class="flex items-center gap-1.5"><i class="ph-bold ph-check-circle text-emerald-600"></i> Regrind 10%</span>
+            </div>
+            <span class="mono">Material Lot: ABS-750 | MB-OR2 | A2608-17</span>
+        </div>
+    </footer>
+
+    <div id="ng-modal" class="fixed inset-0 bg-slate-900/35 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-rose-50">
+                <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="ph-bold ph-warning-octagon text-rose-600"></i> NG งานเสียในวันนี้</h3>
+                <button onclick="closeModal('ng-modal')" class="p-2 text-slate-500 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-slate-600">ลงงานเสียแบบปุ่มล้วน: เลือกรายการ กดจำนวน แล้วค่อยยืนยัน</p>
+                    <span id="total-ng" class="mono text-sm px-3 py-1 rounded-lg bg-rose-100 text-rose-600 border border-rose-200">Total NG: 8</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                        <p class="text-xs font-bold text-slate-600">1) เลือกประเภทของเสีย</p>
+                        <div id="ng-type-buttons" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 bg-white p-3">
+                        <p class="text-xs font-bold text-slate-600 mb-2">2) กดจำนวนชิ้น (0-9)</p>
+                        <div id="ng-pad-qty" class="mono text-5xl leading-none font-black text-rose-600 text-center py-2">1</div>
+                        <div class="grid grid-cols-3 gap-2 mt-3 text-sm font-bold">
+                            <button onclick="appendNgPadDigit(1)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">1</button>
+                            <button onclick="appendNgPadDigit(2)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">2</button>
+                            <button onclick="appendNgPadDigit(3)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">3</button>
+                            <button onclick="appendNgPadDigit(4)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">4</button>
+                            <button onclick="appendNgPadDigit(5)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">5</button>
+                            <button onclick="appendNgPadDigit(6)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">6</button>
+                            <button onclick="appendNgPadDigit(7)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">7</button>
+                            <button onclick="appendNgPadDigit(8)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">8</button>
+                            <button onclick="appendNgPadDigit(9)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">9</button>
+                            <button onclick="clearNgPadQty()" class="py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">C</button>
+                            <button onclick="appendNgPadDigit(0)" class="py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100">0</button>
+                            <button onclick="backspaceNgPadQty()" class="py-2 rounded-lg border border-slate-200 bg-slate-100 hover:bg-slate-200">⌫</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <button onclick="confirmNgEntries()" class="w-full rounded-xl bg-rose-500 border border-rose-600 text-white py-4 px-3 flex flex-col items-center justify-center gap-1 animate-pulse">
+                        <span class="text-2xl leading-none font-black">ยืนยันบันทึก</span>
+                        <div id="ng-pending-summary" class="text-xs text-rose-100">ยังไม่มีรายการ</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="fixed inset-0 bg-slate-900/35 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-amber-50">
+                <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="ph-bold ph-notepad text-amber-700"></i> ประวัติการลงงานเสียล่าสุด</h3>
+                <button onclick="closeModal('history-modal')" class="p-2 text-slate-500 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="p-5">
+                <div id="history-list" class="space-y-2 max-h-[55vh] overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="wi-modal" class="fixed inset-0 bg-slate-900/35 backdrop-blur-sm hidden items-center justify-center p-4 lg:p-6 z-50">
+        <div class="w-full max-w-4xl h-[85vh] bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-cyan-50">
+                <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="ph-bold ph-book-open text-cyan-700"></i> Work Instruction: PL-TRAY-B Rev.03</h3>
+                <button onclick="closeModal('wi-modal')" class="p-2 text-slate-500 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50">
+                <div class="bg-white border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-amber-700">จุดสำคัญ 1: ตัด Gate 4 Cavity</h4>
+                        <p class="text-xs text-slate-600">ตัดแนบผิวชิ้นงาน ไม่ให้ติ่งเกิน 0.2mm</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">Critical</span>
+                </div>
+                <div class="bg-white border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-emerald-700">จุดสำคัญ 2: ตรวจ Surface</h4>
+                        <p class="text-xs text-slate-600">เช็กรอยยุบและรอยไหม้บริเวณจุดกำหนด</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold">Visual QC</span>
+                </div>
+                <div class="bg-white border border-cyan-200 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-cyan-700">จุดสำคัญ 3: แพ็กชิ้นงาน</h4>
+                        <p class="text-xs text-slate-600">รอง EPE ทุก 10 ชิ้น ป้องกันรอยระหว่างขนส่ง</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-cyan-100 text-cyan-700 font-bold">Packing</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="qc-modal" class="fixed inset-0 bg-slate-900/35 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-emerald-50">
+                <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="ph-bold ph-check-square-offset text-emerald-700"></i> บันทึกผลตรวจ QC</h3>
+                <button onclick="closeModal('qc-modal')" class="p-2 text-slate-500 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <form onsubmit="handleQCSubmit(event)" class="p-5 space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">น้ำหนักต่อ Shot (145.0 ± 2.0 g)</label>
+                    <input type="number" step="0.1" required placeholder="145.4" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 mono">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ความกว้าง (120.0 ± 0.3 mm)</label>
+                        <input type="number" step="0.01" required placeholder="120.15" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Visual</label>
+                        <select class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                            <option value="PASS">PASS</option>
+                            <option value="SINK">NG: Sink</option>
+                            <option value="FLASH">NG: Flash</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold transition">ยืนยันบันทึกข้อมูล QC</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="param-modal" class="fixed inset-0 bg-slate-900/35 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-amber-50">
+                <h3 class="font-bold text-slate-700">พารามิเตอร์เครื่องฉีดพลาสติก (IMM-180T)</h3>
+                <button onclick="closeModal('param-modal')" class="p-2 text-slate-500 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="p-5 space-y-2.5 text-sm mono">
+                <div class="flex justify-between rounded-xl bg-slate-50 border border-slate-200 p-3"><span class="text-slate-600">Injection Speed</span><span class="text-amber-700 font-bold">45 mm/s</span></div>
+                <div class="flex justify-between rounded-xl bg-slate-50 border border-slate-200 p-3"><span class="text-slate-600">Holding Pressure</span><span class="text-amber-700 font-bold">75 MPa (3.2s)</span></div>
+                <div class="flex justify-between rounded-xl bg-slate-50 border border-slate-200 p-3"><span class="text-slate-600">Cooling Time</span><span class="text-amber-700 font-bold">9.5 s</span></div>
+                <div class="flex justify-between rounded-xl bg-slate-50 border border-slate-200 p-3"><span class="text-slate-600">Cushion Position</span><span class="text-amber-700 font-bold">5.2 mm</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ngTypeOptions = {
+            sink: 'รอยยุบ (Sink)',
+            flash: 'ครีบหนา (Flash)',
+            short: 'ไม่เต็ม (Short)',
+            burn: 'รอยไหม้ (Burn)'
+        };
+
+        function updateClock() {
+            const now = new Date();
+            const clockEl = document.getElementById('digital-clock');
+            if (clockEl) {
+                clockEl.textContent = now.toLocaleTimeString('th-TH', { hour12: false });
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        const ngCounts = { sink: 3, flash: 2, short: 1, burn: 2 };
+        const ngHistory = [];
+        let ngSelectedType = 'sink';
+        let ngPadQty = '1';
+        let ngPendingEntries = [];
+
+        function renderNgTypeButtons() {
+            const typeButtonsEl = document.getElementById('ng-type-buttons');
+            if (!typeButtonsEl) return;
+
+            const typeKeys = ['sink', 'flash', 'short', 'burn'];
+            typeButtonsEl.innerHTML = typeKeys.map((key) => {
+                const activeClass = ngSelectedType === key
+                    ? 'border-rose-400 bg-rose-50 text-rose-700'
+                    : 'border-slate-200 bg-white text-slate-700';
+                return `<button onclick="selectNgType('${key}')" class="rounded-lg border px-2 py-3 text-left text-sm font-bold ${activeClass}">${ngTypeOptions[key]}</button>`;
+            }).join('');
+        }
+
+        function selectNgType(type) {
+            ngSelectedType = type in ngTypeOptions ? type : 'sink';
+            renderNgTypeButtons();
+        }
+
+        function renderNgPadQty() {
+            const qtyEl = document.getElementById('ng-pad-qty');
+            if (qtyEl) qtyEl.textContent = ngPadQty;
+        }
+
+        function appendNgPadDigit(digit) {
+            const val = String(digit);
+            if (ngPadQty === '0') {
+                ngPadQty = val;
+            } else if (ngPadQty.length < 3) {
+                ngPadQty += val;
+            }
+            renderNgPadQty();
+        }
+
+        function clearNgPadQty() {
+            ngPadQty = '0';
+            renderNgPadQty();
+        }
+
+        function backspaceNgPadQty() {
+            if (ngPadQty.length <= 1) {
+                ngPadQty = '0';
+            } else {
+                ngPadQty = ngPadQty.slice(0, -1);
+            }
+            renderNgPadQty();
+        }
+
+        function renderNgPendingSummary() {
+            const summaryEl = document.getElementById('ng-pending-summary');
+            if (!summaryEl) return;
+
+            if (!ngPendingEntries.length) {
+                summaryEl.textContent = 'ยังไม่มีรายการ';
+                return;
+            }
+
+            summaryEl.innerHTML = ngPendingEntries.map((item) => {
+                return `<div>${ngTypeOptions[item.type]} x ${item.qty} ชิ้น</div>`;
+            }).join('');
+        }
+
+        function addNgPendingEntry() {
+            const qty = Number.parseInt(ngPadQty, 10);
+            if (!Number.isFinite(qty) || qty <= 0) {
+                alert('กรุณากดจำนวนมากกว่า 0');
+                return;
+            }
+
+            const existing = ngPendingEntries.find((item) => item.type === ngSelectedType);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                ngPendingEntries.push({ type: ngSelectedType, qty });
+            }
+
+            ngPadQty = '1';
+            renderNgPadQty();
+            renderNgPendingSummary();
+        }
+
+        function removeLastNgPending() {
+            if (!ngPendingEntries.length) {
+                alert('ยังไม่มีรายการให้ลบ');
+                return;
+            }
+
+            ngPendingEntries.pop();
+            renderNgPendingSummary();
+        }
+
+        function confirmNgEntries() {
+            const instantQty = Number.parseInt(ngPadQty, 10);
+            const hasInstantQty = Number.isFinite(instantQty) && instantQty > 0;
+            const entries = ngPendingEntries.length
+                ? ngPendingEntries
+                : (hasInstantQty ? [{ type: ngSelectedType, qty: instantQty }] : []);
+
+            if (!entries.length) {
+                alert('ยังไม่มีรายการให้บันทึก');
+                return;
+            }
+
+            const nowTime = new Date().toLocaleTimeString('th-TH', { hour12: false });
+            const summary = [];
+
+            entries.forEach((item) => {
+                const key = item.type in ngCounts ? item.type : 'sink';
+                const qty = Number.isFinite(item.qty) && item.qty > 0 ? item.qty : 1;
+
+                ngCounts[key] += qty;
+                const label = ngTypeOptions[key];
+                ngHistory.unshift({
+                    type: `${label} x${qty} ชิ้น`,
+                    time: nowTime
+                });
+                summary.push(`${label} ${qty} ชิ้น`);
+            });
+
+            if (ngHistory.length > 40) ngHistory.length = 40;
+
+            updateNGUI();
+            renderHistory();
+            ngPendingEntries = [];
+            ngPadQty = '1';
+            renderNgPadQty();
+            renderNgPendingSummary();
+            alert(`บันทึกของเสียเรียบร้อย: ${summary.join(' | ')}`);
+        }
+
+        function updateNGUI() {
+            const total = ngCounts.sink + ngCounts.flash + ngCounts.short + ngCounts.burn;
+
+            const sinkEl = document.getElementById('ng-sink');
+            const flashEl = document.getElementById('ng-flash');
+            const shortEl = document.getElementById('ng-short');
+            const burnEl = document.getElementById('ng-burn');
+            const totalEl = document.getElementById('total-ng');
+            const menuTotalEl = document.getElementById('menu-total-ng');
+            const mainNgDisplayEl = document.getElementById('main-ng-display');
+
+            if (sinkEl) sinkEl.textContent = `${ngCounts.sink} ชิ้น`;
+            if (flashEl) flashEl.textContent = `${ngCounts.flash} ชิ้น`;
+            if (shortEl) shortEl.textContent = `${ngCounts.short} ชิ้น`;
+            if (burnEl) burnEl.textContent = `${ngCounts.burn} ชิ้น`;
+            if (totalEl) totalEl.textContent = `Total NG: ${total}`;
+            if (menuTotalEl) menuTotalEl.textContent = `NG ${total}`;
+            if (mainNgDisplayEl) mainNgDisplayEl.textContent = `${total}`;
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            if (!historyList) return;
+
+            if (ngHistory.length === 0) {
+                historyList.innerHTML = '<p class="text-sm text-slate-500">ยังไม่มีประวัติการลงงานเสีย</p>';
+                return;
+            }
+
+            historyList.innerHTML = ngHistory.map((item) => {
+                return `<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-center justify-between"><div><p class="text-sm font-semibold text-slate-700">${item.type}</p><p class="text-xs text-slate-500">เวลา ${item.time}</p></div><span class="text-xs font-bold text-rose-600">+1</span></div>`;
+            }).join('');
+        }
+
+        function addNG(type) {
+            if (type.includes('Sink')) ngCounts.sink++;
+            if (type.includes('Flash')) ngCounts.flash++;
+            if (type.includes('Short')) ngCounts.short++;
+            if (type.includes('Burn')) ngCounts.burn++;
+
+            ngHistory.unshift({
+                type,
+                time: new Date().toLocaleTimeString('th-TH', { hour12: false })
+            });
+            if (ngHistory.length > 40) ngHistory.pop();
+
+            updateNGUI();
+            renderHistory();
+            alert(`บันทึกของเสีย [${type}] สำเร็จ (+1)`);
+        }
+
+        function triggerAndon() {
+            alert('ส่งสัญญาณ ANDON: แจ้ง Leader และช่างแม่พิมพ์แล้ว');
+        }
+
+        function handleQCSubmit(e) {
+            e.preventDefault();
+            closeModal('qc-modal');
+            alert('บันทึกข้อมูล QC เข้าระบบเรียบร้อย');
+        }
+
+        function switchStep(step) {
+            alert(`สลับไปดูวิดีโอแนะนำขั้นตอนที่ ${step}`);
+        }
+
+        const stepImageInput = document.getElementById('step-image-input');
+        const stepImagePreview = document.getElementById('step-image-preview');
+        const dataUploadInput = document.getElementById('data-upload-input');
+
+        if (stepImageInput && stepImagePreview) {
+            stepImageInput.addEventListener('change', (event) => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+
+                const objectUrl = URL.createObjectURL(file);
+                stepImagePreview.style.backgroundImage = `url('${objectUrl}')`;
+            });
+        }
+
+        function triggerDataUpload() {
+            if (dataUploadInput) {
+                dataUploadInput.click();
+            }
+        }
+
+        if (dataUploadInput) {
+            dataUploadInput.addEventListener('change', (event) => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                alert(`เลือกไฟล์ข้อมูลแล้ว: ${file.name}`);
+            });
+        }
+
+        function toggleVideoMute() {
+            const video = document.getElementById('focus-video');
+            const icon = document.getElementById('mute-icon');
+            video.muted = !video.muted;
+            if (video.muted) {
+                icon.className = 'ph-bold ph-speaker-slash text-lg';
+            } else {
+                icon.className = 'ph-bold ph-speaker-high text-lg text-amber-700';
+            }
+        }
+
+        updateNGUI();
+        renderNgTypeButtons();
+        renderNgPadQty();
+        renderNgPendingSummary();
+        renderHistory();
+    </script>
+</body>
+</html>
